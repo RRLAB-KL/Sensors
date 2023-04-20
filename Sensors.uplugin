@@ -1,0 +1,25 @@
+{
+	"FileVersion" : 3,
+	"Version" : 1,
+	"VersionName" : "1.0",
+	"FriendlyName" : "Sensors Plugin",
+	"Description" : " This Unreal Plugin contains virtual sensors made by the Robotics Research Lab of the University of Kaiserslautern-Landau in Unreal Engine 5.",
+	"Category" : "RRLab",
+	"CreatedBy" : "Robotics Research Lab",
+	"CreatedByURL" : "http://rrlab.cs.uni-kl.de",
+	"DocsURL" : "https://github.com/RRLAB-KL/Sensors",
+	"MarketplaceURL" : "",
+	"SupportURL" : "",
+	"EnabledByDefault" : false,
+	"CanContainContent" : true,
+	"IsBetaVersion" : false,
+	"Installed" : false,
+	"Modules" :
+	[
+		{
+			"Name" : "Sensors",
+			"Type" : "Runtime",
+			"LoadingPhase" : "Default"
+		}
+	]
+}
