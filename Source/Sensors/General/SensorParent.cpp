@@ -20,11 +20,23 @@ ASensorParent::ASensorParent()
 // Called when the game starts or when spawned
 void ASensorParent::BeginPlay()
 {
-  //Changes the time between tick events
-  this->SetActorTickInterval(TickInterval);
+  //If the TickInterval is below 0, the sensor is event-based
+  if (this->TickInterval < 0.0f)
+  {
+    this->SetActorTickEnabled(false);
+    PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bTickEvenWhenPaused = false;
+  }
+  //Time-based, based on the TickIntervall
+  else
+  {
+    this->SetActorTickInterval(this->TickInterval);
+  }
   Super::BeginPlay();
 //  this->CreatePorts();
 //  this->UpdatePorts();
+  //Has to be done in case the SensorName changed
+  this->Initialize();
 
   //Manage Output
   SensorOutput.TickInterval = this->TickInterval;
@@ -43,6 +55,7 @@ void ASensorParent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ASensorParent::Tick(float DeltaTime)
 {
   Super::Tick(DeltaTime);
+  this->Sense(DeltaTime);
 }
 
 //void ASensorParent::CreatePorts()
@@ -75,6 +88,11 @@ void ASensorParent::Tick(float DeltaTime)
 void ASensorParent::UpdateParameters_Implementation()
 {
   UE_LOG(LogTemp, Warning, TEXT("SensorParent UpdateParameters was called, this is probably a mistake and happens when there is no implementation of UpdateParameters_Implementation in the sensor."));
+}
+
+void ASensorParent::Sense_Implementation(const float &DeltaTime)
+{
+  UE_LOG(LogTemp, Warning, TEXT("SensorParent Sense was called, this is probably a mistake and happens when there is no implementation of Sense_Implementation in the sensor."));
 }
 
 void ASensorParent::PublishOutput()

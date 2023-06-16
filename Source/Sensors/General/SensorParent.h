@@ -81,6 +81,24 @@ public:
   UFUNCTION(BlueprintCallable)
   void Initialize();
 
+  /*
+   * This method implements the sensing part of the specific sensor.
+   * For an event-based usage, set the TickIntervall to < 0.0. The method has to be called manually.
+   * For a time-based usage, set the TickIntervall to >= 0.0. The Sense method is called in the SensorParent Tick Event
+   *
+   * Note that this is not the implementation, it just defines the name as well as the button for calling it in the editor.
+   * The method that is overridden is the method Sense_Implementation
+   *
+   * @param DeltaTime the delta time of the TickFunction, set to < 0.0 if event-based
+   */
+  UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Sensor Parent")
+  void Sense(const float &DeltaTime);
+
+  /**
+   * The actual implementation of the function above.
+   */
+  virtual void Sense_Implementation(const float &DeltaTime);
+
 protected:
   /**This method is used to publish the output struct for the specific sensor depending on the target and the protocol.*/
   virtual void PublishOutput();
