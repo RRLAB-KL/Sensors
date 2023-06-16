@@ -83,6 +83,10 @@ struct FParRayTracingLiDARACtor
   UPROPERTY(EditAnywhere, BlueprintReadWrite)
   bool WriteObjectID;
 
+  /*Flag for using Locations in global coordinates ot local coordinates based on the senros*/
+  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  bool UseGlobal;
+
   FParRayTracingLiDARACtor()
   {
     ChannelCount = 64;
@@ -98,6 +102,7 @@ struct FParRayTracingLiDARACtor
     visualizeRays = false;
     UseRGBOutput = false;
     WriteObjectID = false;
+    UseGlobal = false;
   }
 
 };
@@ -180,8 +185,10 @@ public:
 
   virtual void AddNoise_Implementation(FVector& Location);
 
-
   virtual void PublishOutput() override;
+
+  virtual void Sense_Implementation(const float &DeltaTime);
+
 
 private:
 

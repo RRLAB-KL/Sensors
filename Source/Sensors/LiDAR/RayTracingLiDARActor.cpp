@@ -130,56 +130,6 @@ void ARayTracingLiDARActor::Tick(float DeltaTime)
   Super::Tick(DeltaTime);
 
 
-  //clearing the results for each channel
-  //also shooting images
-  if (currentSubstep_ == 0) //Tick 0
-  {
-    if (!this->RayTracingLiDARActorParameters.UseRGBOutput)
-    {
-      //make 3 mono images, but with a red light
-      RedLightComp->Intensity = this->RayTracingLiDARActorParameters.IntensityOfRedLight;
-      RedLightComp->MarkRenderStateDirty();
-    }
-    sceneCapture_[0]->GetCaptureComponent2D()->CaptureScene();
-    sceneCapture_[1]->GetCaptureComponent2D()->CaptureScene();
-    sceneCapture_[2]->GetCaptureComponent2D()->CaptureScene();
-    if (!this->RayTracingLiDARActorParameters.UseRGBOutput) //TODO not sure why
-    {
-      RedLightComp->Intensity = 0;
-      RedLightComp->MarkRenderStateDirty();
-    }
-
-    RecordedHits_.resize(this->RayTracingLiDARActorParameters.ChannelCount);
-
-    for (auto & hits : RecordedHits_)
-    {
-      hits.clear();
-      hits.reserve(this->RayTracingLiDARActorParameters.PointsToScanWithOneLaser);
-    }
-  }
-
-  //make the pointcloud (can be splitted into multiple steps )
-  if (currentSubstep_ != SimulationSubsteps_) //Tick 0 until second-last
-  {
-    // shoots lasers and record hits (115 ms)
-    MakePointCloud();
-
-    transform_ = GetTransform();
-
-    currentSubstep_++;
-  }
-  else //last Tick
-  {
-    //Export the point cloud, up to 400 ms(for read render target))
-    ExportPointCloud();
-
-    this->currentSubstep_ = 0;
-  }
-
-  //UE_LOG(LogTemp, Warning, TEXT("TICK END!"));
-//TODO should only be called when something changes
-  this->PublishOutput();
-  this->AdapterComponent->PublishLiDARData(this->LiDAROutput);
 }
 
 
@@ -258,22 +208,33 @@ void ARayTracingLiDARActor::ExportPointCloud()
   //DRAWDEBUG
   if (this->RayTracingLiDARActorParameters.visualizeRays || SensorVisualization != nullptr)
   {
-    TArray<FVector> GlobalLocations;
+    TArray<FVector> GlobalLocations;//TODO should not be necessary, only for SensorVisualization
     GlobalLocations.Reserve(this->LiDAROutput.Locations.Num());
     for (const auto & loc : this->LiDAROutput.Locations)
     {
       FVector GlobalLoc = transform_.TransformPosition(loc);
       if (this->RayTracingLiDARActorParameters.visualizeRays)
       {
-        DrawDebugPoint(GetWorld(), FVector(GlobalLoc.X, GlobalLoc.Y, GlobalLoc.Z), 10, FColor(255, 0, 0), false, this->GetActorTickInterval());
-        DrawDebugLine(GetWorld(), GetActorLocation(), FVector(GlobalLoc.X, GlobalLoc.Y, GlobalLoc.Z), FColor(255, 0, 0), false, this->GetActorTickInterval());
+    	  if(!this->RayTracingLiDARActorParameters.UseGlobal){
+			DrawDebugPoint(GetWorld(), FVector(loc.X, loc.Y, loc.Z), 10, FColor(255, 0, 0), false, this->GetActorTickInterval());
+			DrawDebugLine(GetWorld(), GetActorLocation(), FVector(loc.X, loc.Y, loc.Z), FColor(255, 0, 0), false, this->GetActorTickInterval());
+
+    	  }else {
+    		  DrawDebugPoint(GetWorld(), FVector(GlobalLoc.X, GlobalLoc.Y, GlobalLoc.Z), 10, FColor(255, 0, 0), false, this->GetActorTickInterval());
+    		  			DrawDebugLine(GetWorld(), GetActorLocation(), FVector(GlobalLoc.X, GlobalLoc.Y, GlobalLoc.Z), FColor(255, 0, 0), false, this->GetActorTickInterval());
+		}
       }
       GlobalLocations.Emplace(GlobalLoc);
     }
     if (SensorVisualization != nullptr)
     {
-      //Visualize the Locations using the SensorVisualization class
-      SensorVisualization->VisualizePointcloud(GlobalLocations);
+    	if(!this->RayTracingLiDARActorParameters.UseGlobal){
+  		  SensorVisualization->VisualizePointcloud(this->LiDAROutput.Locations);
+    	}else{
+		  //Visualize the Locations using the SensorVisualization class
+		  SensorVisualization->VisualizePointcloud(GlobalLocations);
+
+    	}
     }
 
   }
@@ -447,11 +408,14 @@ void ARayTracingLiDARActor::AddHitLocations()
       //
       //World Coordinates --> Local Coordinates
       FVector WorldPoint = hit.ImpactPoint;
-      FVector LocalPoint = WorldPoint - this->GetActorLocation();
+      if(!this->RayTracingLiDARActorParameters.UseGlobal){
+		  WorldPoint -= this->GetActorLocation();
+      }
 
       //Add the noise to the locations
-      this->AddNoise_Implementation(LocalPoint);
-      this->LiDAROutput.Locations.Emplace(LocalPoint);
+      this->AddNoise_Implementation(WorldPoint);
+      this->LiDAROutput.Locations.Emplace(WorldPoint);
+
 
       //Manage the Object Id which is the first entry of the Tags Array in this case
       if (this->RayTracingLiDARActorParameters.WriteObjectID && hit.GetActor()!=nullptr && hit.GetActor()->Tags.Num() != 0)
@@ -521,5 +485,74 @@ void ARayTracingLiDARActor::PublishOutput()
 void ARayTracingLiDARActor::AddNoise_Implementation(FVector& Location)
 {
   UNoiseModels::AddVectorNoise(Location, this->RayTracingLiDARActorParameters.RandomNoiseValue, Location);
+}
+
+
+//----------------------------------------------------------------------
+// ARayTracingLiDARActor Sense
+//----------------------------------------------------------------------
+void ARayTracingLiDARActor::Sense_Implementation(const float &DeltaTime)
+{
+  //clearing the results for each channel
+  //also shooting images
+  if (currentSubstep_ == 0) //Tick 0
+  {
+    if (!this->RayTracingLiDARActorParameters.UseRGBOutput)
+    {
+      //make 3 mono images, but with a red light
+      RedLightComp->Intensity = this->RayTracingLiDARActorParameters.IntensityOfRedLight;
+      RedLightComp->MarkRenderStateDirty();
+    }
+    sceneCapture_[0]->GetCaptureComponent2D()->CaptureScene();
+    sceneCapture_[1]->GetCaptureComponent2D()->CaptureScene();
+    sceneCapture_[2]->GetCaptureComponent2D()->CaptureScene();
+    if (!this->RayTracingLiDARActorParameters.UseRGBOutput) //TODO not sure why
+    {
+      RedLightComp->Intensity = 0;
+      RedLightComp->MarkRenderStateDirty();
+    }
+
+    RecordedHits_.resize(this->RayTracingLiDARActorParameters.ChannelCount);
+
+    for (auto & hits : RecordedHits_)
+    {
+      hits.clear();
+      hits.reserve(this->RayTracingLiDARActorParameters.PointsToScanWithOneLaser);
+    }
+  }
+
+  //make the pointcloud (can be splitted into multiple steps )
+  if (currentSubstep_ != SimulationSubsteps_) //Tick 0 until second-last
+  {
+    // shoots lasers and record hits (115 ms)
+    MakePointCloud();
+
+    transform_ = GetTransform();
+
+    currentSubstep_++;
+  }
+  else //last Tick
+  {
+    //Export the point cloud, up to 400 ms(for read render target))
+    ExportPointCloud();
+
+    this->currentSubstep_ = 0;
+  }
+
+  //UE_LOG(LogTemp, Warning, TEXT("TICK END!"));
+  //TODO should only be called when something changes
+  this->PublishOutput();
+  if (this->AdapterComponent == nullptr)
+  {
+    UE_LOG(LogTemp, Warning, TEXT("RayTracingLiDARActor AdapterComponent is nullptr."));
+  }
+  else if (!this->AdapterComponent->HasBeenCreated())
+  {
+    UE_LOG(LogTemp, Warning, TEXT("RayTracingLiDARActor AdapterComponent is not valid."));
+  }
+  else
+  {
+    this->AdapterComponent->PublishLiDARData(this->LiDAROutput);
+  }
 }
 
