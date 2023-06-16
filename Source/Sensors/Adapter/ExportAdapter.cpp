@@ -34,54 +34,126 @@ void UExportAdapter::PublishLiDARData(struct FLiDARData LiDARStruct)
       //only Locations
       if (LiDARStruct.Locations.Num() != LiDARStruct.ObjectIDs.Num() && LiDARStruct.Locations.Num() != LiDARStruct.RGBValues.Num())
       {
-        StringArray.Emplace(TEXT("---,XCoordinate,YCoordinate,ZCoordinate"));
+        if (this->current_line_number == 0)
+        {
+          StringArray.Emplace(TEXT("---,XCoordinate,YCoordinate,ZCoordinate"));
+        }
         for (int32 i = 0; i < LiDARStruct.Locations.Num(); i++)
         {
-          StringArray.Emplace(CreateLine(i, LiDARStruct.Locations[i]));
+          //Either use the global line number or the one of the current scan
+          if (this->FileWrie == EFileWriteDirective::Append)
+          {
+            StringArray.Emplace(CreateLine(this->current_line_number, LiDARStruct.Locations[i]));
+            this->current_line_number++;
+          }
+          else
+          {
+            StringArray.Emplace(CreateLine(i, LiDARStruct.Locations[i]));
+          }
         }
       }
       //Locations with RGB values and ObjectID
       else if (LiDARStruct.Locations.Num() == LiDARStruct.RGBValues.Num() && LiDARStruct.Locations.Num() == LiDARStruct.ObjectIDs.Num())
       {
-        //First line is needed for correct Unreal import
-        StringArray.Emplace(TEXT("---,XCoordinate,YCoordinate,ZCoordinate,RColor,GColor,BColor,ObjectID"));
+        if (this->current_line_number == 0)
+        {
+          //First line is needed for correct Unreal import
+          StringArray.Emplace(TEXT("---,XCoordinate,YCoordinate,ZCoordinate,RColor,GColor,BColor,ObjectID"));
+        }
 
         for (int32 i = 0; i < LiDARStruct.Locations.Num(); i++)
         {
-          StringArray.Emplace(CreateLine(i, LiDARStruct.Locations[i], LiDARStruct.RGBValues[i], LiDARStruct.ObjectIDs[i]));
+          if (this->FileWrie == EFileWriteDirective::Append)
+          {
+            StringArray.Emplace(CreateLine(this->current_line_number, LiDARStruct.Locations[i], LiDARStruct.RGBValues[i], LiDARStruct.ObjectIDs[i]));
+            this->current_line_number++;
+          }
+          else
+          {
+            StringArray.Emplace(CreateLine(i, LiDARStruct.Locations[i], LiDARStruct.RGBValues[i], LiDARStruct.ObjectIDs[i]));
+          }
         }
       }
       //Locations with RGB
-      else if(LiDARStruct.Locations.Num() == LiDARStruct.RGBValues.Num() && LiDARStruct.Locations.Num() != LiDARStruct.ObjectIDs.Num())
+      else if (LiDARStruct.Locations.Num() == LiDARStruct.RGBValues.Num() && LiDARStruct.Locations.Num() != LiDARStruct.ObjectIDs.Num())
       {
-    	  StringArray.Emplace(TEXT("---,XCoordinate,YCoordinate,ZCoordinate,RColor,GColor,BColor"));
-          for (int32 i = 0; i < LiDARStruct.Locations.Num(); i++)
+        if (this->current_line_number == 0)
+        {
+          StringArray.Emplace(TEXT("---,XCoordinate,YCoordinate,ZCoordinate,RColor,GColor,BColor"));
+        }
+
+        for (int32 i = 0; i < LiDARStruct.Locations.Num(); i++)
+        {
+          if (this->FileWrie == EFileWriteDirective::Append)
+          {
+            StringArray.Emplace(CreateLine(this->current_line_number, LiDARStruct.Locations[i], LiDARStruct.RGBValues[i]));
+            this->current_line_number++;
+          }
+          else
           {
             StringArray.Emplace(CreateLine(i, LiDARStruct.Locations[i], LiDARStruct.RGBValues[i]));
           }
-	}
-      else if (LiDARStruct.Locations.Num() != LiDARStruct.RGBValues.Num() && LiDARStruct.Locations.Num() == LiDARStruct.ObjectIDs.Num()) {
-    	  StringArray.Emplace(TEXT("---,XCoordinate,YCoordinate,ZCoordinate,BColor"));
-          for (int32 i = 0; i < LiDARStruct.Locations.Num(); i++)
+        }
+      }
+      else if (LiDARStruct.Locations.Num() != LiDARStruct.RGBValues.Num() && LiDARStruct.Locations.Num() == LiDARStruct.ObjectIDs.Num())
+      {
+        if (this->current_line_number == 0)
+        {
+          StringArray.Emplace(TEXT("---,XCoordinate,YCoordinate,ZCoordinate,BColor"));
+        }
+        for (int32 i = 0; i < LiDARStruct.Locations.Num(); i++)
+        {
+          if (this->FileWrie == EFileWriteDirective::Append)
+          {
+            StringArray.Emplace(CreateLine(this->current_line_number, LiDARStruct.Locations[i], LiDARStruct.ObjectIDs[i]));
+            this->current_line_number++;
+          }
+          else
           {
             StringArray.Emplace(CreateLine(i, LiDARStruct.Locations[i], LiDARStruct.ObjectIDs[i]));
           }
-	}
+        }
+      }
       else
       {
         UE_LOG(LogTemp, Warning, TEXT("ExportAdapter Either only output the Locations or RGB values and ObjectsIDs. Locations array has %d many elements and the ObjectIDs array %d and RGB Values %d"), LiDARStruct.Locations.Num(), LiDARStruct.ObjectIDs.Num(), LiDARStruct.RGBValues.Num());
         return;
       }
 
-      // We use the LoadFileToString to load the file into
-      if (FFileHelper::SaveStringArrayToFile(StringArray, *FilePath))
+      /*For the write flags:
+       *
+       * enum EFileWrite
+      *{
+      *FILEWRITE_None                 = 0x00,
+      *FILEWRITE_NoFail               = 0x01,
+      *FILEWRITE_NoReplaceExisting    = 0x02,
+      *FILEWRITE_EvenIfReadOnly       = 0x04,
+      *FILEWRITE_Append               = 0x08,
+      *FILEWRITE_AllowRead            = 0x10,
+      *FILEWRITE_Silent               = 0x20,
+
+      *}
+       */
+      bool write_success = false;
+      if (this->FileWrie == EFileWriteDirective::Replace)
       {
-        UE_LOG(LogTemp, Warning, TEXT("FileManipulation: Succesfully Written to the text file"));
+        write_success = FFileHelper::SaveStringArrayToFile(StringArray, *FilePath);
+
       }
       else
       {
-        UE_LOG(LogTemp, Warning, TEXT("FileManipulation: Failed to write FString to file."));
+        //8 at the end for appending the string to the file
+        write_success = FFileHelper::SaveStringArrayToFile(StringArray, *FilePath, FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get(), 8);
       }
+      if (write_success)
+      {
+        UE_LOG(LogTemp, Warning, TEXT("ExportAdapter: Successfully Written to the text file"));
+      }
+      else
+      {
+        UE_LOG(LogTemp, Warning, TEXT("ExportAdapter: Failed to write FString to file."));
+      }
+
     }
     else
     {
