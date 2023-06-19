@@ -10,6 +10,7 @@
 
 #include "Math/Vector.h"
 #include "DrawDebugHelpers.h"
+#include "CollisionQueryParams.h"
 #include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
 #include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"
 #include "Kismet/KismetRenderingLibrary.h"
@@ -212,29 +213,39 @@ void ARayTracingLiDARActor::ExportPointCloud()
     GlobalLocations.Reserve(this->LiDAROutput.Locations.Num());
     for (const auto & loc : this->LiDAROutput.Locations)
     {
-      FVector GlobalLoc = transform_.TransformPosition(loc);
+       FVector GlobalLoc;
+       if (!this->RayTracingLiDARActorParameters.UseGlobal)
+       {
+           GlobalLoc = transform_.TransformPosition(loc);
+       }
+       else
+       {
+           GlobalLoc = loc;
+       }
+
+
       if (this->RayTracingLiDARActorParameters.visualizeRays)
       {
     	  if(!this->RayTracingLiDARActorParameters.UseGlobal){
-			DrawDebugPoint(GetWorld(), FVector(loc.X, loc.Y, loc.Z), 10, FColor(255, 0, 0), false, this->GetActorTickInterval());
-			DrawDebugLine(GetWorld(), GetActorLocation(), FVector(loc.X, loc.Y, loc.Z), FColor(255, 0, 0), false, this->GetActorTickInterval());
-
-    	  }else {
-    		  DrawDebugPoint(GetWorld(), FVector(GlobalLoc.X, GlobalLoc.Y, GlobalLoc.Z), 10, FColor(255, 0, 0), false, this->GetActorTickInterval());
-    		  			DrawDebugLine(GetWorld(), GetActorLocation(), FVector(GlobalLoc.X, GlobalLoc.Y, GlobalLoc.Z), FColor(255, 0, 0), false, this->GetActorTickInterval());
-		}
+			DrawDebugPoint(GetWorld(), FVector(GlobalLoc.X, GlobalLoc.Y, GlobalLoc.Z), 10, FColor(255, 0, 0), false, this->GetActorTickInterval());
+			DrawDebugLine(GetWorld(), GetActorLocation(), FVector(GlobalLoc.X, GlobalLoc.Y, GlobalLoc.Z), FColor(255, 0, 0), false, this->GetActorTickInterval());
+    	  }else 
+          {
+    		  DrawDebugPoint(GetWorld(), FVector(loc.X, loc.Y, loc.Z), 10, FColor(255, 0, 0), false, this->GetActorTickInterval());
+    		  DrawDebugLine(GetWorld(), GetActorLocation(), FVector(loc.X, loc.Y, loc.Z), FColor(255, 0, 0), false, this->GetActorTickInterval());
+		  }
       }
       GlobalLocations.Emplace(GlobalLoc);
     }
     if (SensorVisualization != nullptr)
     {
-    	if(!this->RayTracingLiDARActorParameters.UseGlobal){
-  		  SensorVisualization->VisualizePointcloud(this->LiDAROutput.Locations);
+        SensorVisualization->VisualizePointcloud(GlobalLocations);
+    	/*if (!this->RayTracingLiDARActorParameters.UseGlobal) {
+  		  SensorVisualization->VisualizePointcloud(GlobalLocations);
     	}else{
 		  //Visualize the Locations using the SensorVisualization class
 		  SensorVisualization->VisualizePointcloud(GlobalLocations);
-
-    	}
+    	}*/
     }
 
   }
@@ -290,13 +301,18 @@ bool ARayTracingLiDARActor::ShootLaser(const float VerticalAngle, const float Ho
 
   FVector EndTrace = (this->RayTracingLiDARActorParameters.Range * 100.0) * UKismetMathLibrary::GetForwardVector(ResultRot) + LidarBodyLoc;
 
-  GetWorld()->LineTraceSingleByChannel( // CARLA uses ParallelLineTraceSingleByChannel
+  FCollisionObjectQueryParams CollisionObjects;
+  CollisionObjects.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldStatic);
+  CollisionObjects.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic); 
+  CollisionObjects.AddObjectTypesToQuery(ECollisionChannel::ECC_Vehicle);
+
+  GetWorld()->LineTraceSingleByObjectType( // CARLA uses ParallelLineTraceSingleByChannel
     HitInfo,
     LidarBodyLoc,
     EndTrace,
-    ECC_GameTraceChannel2,
-    TraceParams,
-    FCollisionResponseParams::DefaultResponseParam
+      CollisionObjects,
+    TraceParams//,
+    //FCollisionResponseParams::DefaultResponseParam
   );
 
   if (HitInfo.bBlockingHit)
