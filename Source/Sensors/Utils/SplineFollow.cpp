@@ -76,6 +76,7 @@ void ASplineFollow::OnConstruction(const FTransform &Transform)
 		CurrentBox->SetVisibility(true,false);
 		CurrentBox->SetHiddenInGame(false, false);
   		CurrentBox->SetCollisionProfileName("OverlapAll", true);
+		CurrentBox->SetCollisionObjectType(ECollisionChannel::ECC_Visibility);
 		CurrentBox->SetRelativeLocation(this->SplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Type::Local));
 		CurrentBox->SetGenerateOverlapEvents(true);
 
