@@ -41,3 +41,19 @@ To check the content in Unreal, do the following:
 7. Start the simulation
 8. After **TickIntervall** seconds, the pointcloud should written to the file you have selected
 9. You can check the Output Log or command line for error messages
+
+### Move sensor along spline
+For recording sensor data on a fixed path, there is a [spline](https://docs.unrealengine.com/5.1/en-US/blueprint-spline-components-overview-in-unreal-engine/) utilizing an event-based sensor setup.
+1. Drag the _SplineFollow_ class into your scene, it can be found in `Plugins/Sensors Plugin C++ Classes/Utils/`
+2. Adjust the spline according to your needs, note the following:
+   1. The sensor records at every spline point.
+   2. There is no recording at the first and last spline point.
+   3. The detection of a spline point is done via collision overlap, so your sensor needs to have a mesh with collision
+3. Drag a sensor into your scene
+4. In the _SplineFollow_ actor, set the variable _Sensor_ as a reference to your previously spawned sensor.
+5. Adjust the _Timestep_ according to your application if needed. Every EventTick, the value _Timestep_ is added to the current time on the spline.
+6. Start the simulation.
+7. Check the _start_ variable of the _SplineFollow_ actor, the sensor should now move along the spline
+  
+
+
