@@ -425,7 +425,7 @@ void ARayTracingLiDARActor::AddHitLocations()
       //World Coordinates --> Local Coordinates
       FVector WorldPoint = hit.ImpactPoint;
       if(!this->RayTracingLiDARActorParameters.UseGlobal){
-		  WorldPoint -= this->GetActorLocation();
+		    WorldPoint = this->transform_.InverseTransformPosition(WorldPoint);
       }
 
       //Add the noise to the locations
