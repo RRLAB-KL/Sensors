@@ -20,7 +20,8 @@ public Sensors(ReadOnlyTargetRules Target) : base(Target)
 					"Engine",
 					"InputCore",
 					"RenderCore",
-					"RHI"
+					"RHI",
+					"Niagara",
 				});
 
 		PrivateDependencyModuleNames.AddRange(
