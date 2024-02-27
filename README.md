@@ -42,6 +42,15 @@ To check the content in Unreal, do the following:
 8. After **TickIntervall** seconds, the pointcloud should written to the file you have selected
 9. You can check the Output Log or command line for error messages
 
+### Usage of Particle Lidar
+1. Navigate to `PluginsSensors Plugin Content"/LiDAR/ParticleLidar` and drag _BP\_ParticleLidar_ into the scene
+2. Parameters such as the channel count can be directly adjusted in the Details panel. To disable the particle rendering, open _PS\_LidarParticleSystem_, and disable **Sprite Renderer**
+3. The point cloud can either be used in the C++ class _ParticleLidar.cpp_ or in the Blueprint _BP_ParticleLidar.cpp_. It’s also possible to use the prebuild Adapters.
+
+See a real-time demo of the sensor here:
+[![Youtube video](http://img.youtube.com/vi/RXa1iCmUg6M/0.jpg)](http://www.youtube.com/watch?v=RXa1iCmUg6M "Simulation of 512 channel LiDAR in Realtime")
+
+
 ### Move sensor along spline
 For recording sensor data on a fixed path, there is a [spline](https://docs.unrealengine.com/5.1/en-US/blueprint-spline-components-overview-in-unreal-engine/) utilizing an event-based sensor setup.
 1. Drag the _SplineFollow_ class into your scene, it can be found in `Plugins/Sensors Plugin C++ Classes/Utils/`
